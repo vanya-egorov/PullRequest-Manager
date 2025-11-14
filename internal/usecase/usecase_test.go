@@ -11,194 +11,298 @@ import (
 	"github.com/vanya-egorov/PullRequest-Manager/pkg/logger"
 )
 
-type mockRepository struct {
-	createTeamFunc                      func(ctx context.Context, name string, members []entities.TeamMember) (entities.Team, error)
-	getTeamFunc                         func(ctx context.Context, name string) (entities.Team, error)
-	getUserFunc                         func(ctx context.Context, userID string) (entities.User, error)
-	setUserActiveFunc                   func(ctx context.Context, userID string, isActive bool) (entities.User, error)
-	listUsersByTeamFunc                 func(ctx context.Context, teamName string, onlyActive bool) ([]entities.User, error)
-	createPullRequestFunc               func(ctx context.Context, pr entities.PullRequest) (entities.PullRequest, error)
-	getPullRequestFunc                  func(ctx context.Context, prID string) (entities.PullRequest, error)
-	setPullRequestStatusMergedFunc      func(ctx context.Context, prID string) (entities.PullRequest, error)
-	listAssignedReviewersFunc           func(ctx context.Context, prID string) ([]string, error)
-	replaceReviewerFunc                 func(ctx context.Context, prID string, oldUserID string, newUserID *string) error
-	listReviewPullRequestsFunc          func(ctx context.Context, userID string) ([]entities.PullRequestShort, error)
-	listReviewerAssignmentsFunc         func(ctx context.Context) (map[string]int, error)
-	countOpenPullRequestsFunc           func(ctx context.Context) (int, error)
-	updateNeedMoreReviewersFunc         func(ctx context.Context, prID string, need bool) error
-	listOpenPullRequestsByReviewersFunc func(ctx context.Context, userIDs []string) (map[string][]entities.PullRequest, error)
-	bulkSetUsersActiveFunc              func(ctx context.Context, teamName string, userIDs []string, isActive bool) ([]entities.User, error)
+type mockRepo struct {
+	createTeam                      func(ctx context.Context, name string, members []entities.TeamMember) (entities.Team, error)
+	getTeam                         func(ctx context.Context, name string) (entities.Team, error)
+	getUser                         func(ctx context.Context, userID string) (entities.User, error)
+	setUserActive                   func(ctx context.Context, userID string, isActive bool) (entities.User, error)
+	listUsersByTeam                 func(ctx context.Context, teamName string, onlyActive bool) ([]entities.User, error)
+	createPullRequest               func(ctx context.Context, pr entities.PullRequest) (entities.PullRequest, error)
+	getPullRequest                  func(ctx context.Context, prID string) (entities.PullRequest, error)
+	setPullRequestStatusMerged      func(ctx context.Context, prID string) (entities.PullRequest, error)
+	listAssignedReviewers           func(ctx context.Context, prID string) ([]string, error)
+	replaceReviewer                 func(ctx context.Context, prID string, oldUserID string, newUserID *string) error
+	listReviewPullRequests          func(ctx context.Context, userID string) ([]entities.PullRequestShort, error)
+	listReviewerAssignments         func(ctx context.Context) (map[string]int, error)
+	countOpenPullRequests           func(ctx context.Context) (int, error)
+	updateNeedMoreReviewers         func(ctx context.Context, prID string, need bool) error
+	listOpenPullRequestsByReviewers func(ctx context.Context, userIDs []string) (map[string][]entities.PullRequest, error)
+	bulkSetUsersActive              func(ctx context.Context, teamName string, userIDs []string, isActive bool) ([]entities.User, error)
 }
 
-func (m *mockRepository) CreateTeam(ctx context.Context, name string, members []entities.TeamMember) (entities.Team, error) {
-	return m.createTeamFunc(ctx, name, members)
+func (m *mockRepo) CreateTeam(ctx context.Context, name string, members []entities.TeamMember) (entities.Team, error) {
+	if m.createTeam != nil {
+		return m.createTeam(ctx, name, members)
+	}
+	return entities.Team{}, nil
 }
 
-func (m *mockRepository) GetTeam(ctx context.Context, name string) (entities.Team, error) {
-	return m.getTeamFunc(ctx, name)
+func (m *mockRepo) GetTeam(ctx context.Context, name string) (entities.Team, error) {
+	if m.getTeam != nil {
+		return m.getTeam(ctx, name)
+	}
+	return entities.Team{}, nil
 }
 
-func (m *mockRepository) GetUser(ctx context.Context, userID string) (entities.User, error) {
-	return m.getUserFunc(ctx, userID)
+func (m *mockRepo) GetUser(ctx context.Context, userID string) (entities.User, error) {
+	if m.getUser != nil {
+		return m.getUser(ctx, userID)
+	}
+	return entities.User{}, nil
 }
 
-func (m *mockRepository) SetUserActive(ctx context.Context, userID string, isActive bool) (entities.User, error) {
-	return m.setUserActiveFunc(ctx, userID, isActive)
+func (m *mockRepo) SetUserActive(ctx context.Context, userID string, isActive bool) (entities.User, error) {
+	if m.setUserActive != nil {
+		return m.setUserActive(ctx, userID, isActive)
+	}
+	return entities.User{}, nil
 }
 
-func (m *mockRepository) ListUsersByTeam(ctx context.Context, teamName string, onlyActive bool) ([]entities.User, error) {
-	return m.listUsersByTeamFunc(ctx, teamName, onlyActive)
+func (m *mockRepo) ListUsersByTeam(ctx context.Context, teamName string, onlyActive bool) ([]entities.User, error) {
+	if m.listUsersByTeam != nil {
+		return m.listUsersByTeam(ctx, teamName, onlyActive)
+	}
+	return []entities.User{}, nil
 }
 
-func (m *mockRepository) CreatePullRequest(ctx context.Context, pr entities.PullRequest) (entities.PullRequest, error) {
-	return m.createPullRequestFunc(ctx, pr)
+func (m *mockRepo) CreatePullRequest(ctx context.Context, pr entities.PullRequest) (entities.PullRequest, error) {
+	if m.createPullRequest != nil {
+		return m.createPullRequest(ctx, pr)
+	}
+	return pr, nil
 }
 
-func (m *mockRepository) GetPullRequest(ctx context.Context, prID string) (entities.PullRequest, error) {
-	return m.getPullRequestFunc(ctx, prID)
+func (m *mockRepo) GetPullRequest(ctx context.Context, prID string) (entities.PullRequest, error) {
+	if m.getPullRequest != nil {
+		return m.getPullRequest(ctx, prID)
+	}
+	return entities.PullRequest{}, nil
 }
 
-func (m *mockRepository) SetPullRequestStatusMerged(ctx context.Context, prID string) (entities.PullRequest, error) {
-	return m.setPullRequestStatusMergedFunc(ctx, prID)
+func (m *mockRepo) SetPullRequestStatusMerged(ctx context.Context, prID string) (entities.PullRequest, error) {
+	if m.setPullRequestStatusMerged != nil {
+		return m.setPullRequestStatusMerged(ctx, prID)
+	}
+	return entities.PullRequest{}, nil
 }
 
-func (m *mockRepository) ListAssignedReviewers(ctx context.Context, prID string) ([]string, error) {
-	return m.listAssignedReviewersFunc(ctx, prID)
+func (m *mockRepo) ListAssignedReviewers(ctx context.Context, prID string) ([]string, error) {
+	if m.listAssignedReviewers != nil {
+		return m.listAssignedReviewers(ctx, prID)
+	}
+	return []string{}, nil
 }
 
-func (m *mockRepository) ReplaceReviewer(ctx context.Context, prID string, oldUserID string, newUserID *string) error {
-	return m.replaceReviewerFunc(ctx, prID, oldUserID, newUserID)
+func (m *mockRepo) ReplaceReviewer(ctx context.Context, prID string, oldUserID string, newUserID *string) error {
+	if m.replaceReviewer != nil {
+		return m.replaceReviewer(ctx, prID, oldUserID, newUserID)
+	}
+	return nil
 }
 
-func (m *mockRepository) ListReviewPullRequests(ctx context.Context, userID string) ([]entities.PullRequestShort, error) {
-	return m.listReviewPullRequestsFunc(ctx, userID)
+func (m *mockRepo) ListReviewPullRequests(ctx context.Context, userID string) ([]entities.PullRequestShort, error) {
+	if m.listReviewPullRequests != nil {
+		return m.listReviewPullRequests(ctx, userID)
+	}
+	return []entities.PullRequestShort{}, nil
 }
 
-func (m *mockRepository) ListReviewerAssignments(ctx context.Context) (map[string]int, error) {
-	return m.listReviewerAssignmentsFunc(ctx)
+func (m *mockRepo) ListReviewerAssignments(ctx context.Context) (map[string]int, error) {
+	if m.listReviewerAssignments != nil {
+		return m.listReviewerAssignments(ctx)
+	}
+	return map[string]int{}, nil
 }
 
-func (m *mockRepository) CountOpenPullRequests(ctx context.Context) (int, error) {
-	return m.countOpenPullRequestsFunc(ctx)
+func (m *mockRepo) CountOpenPullRequests(ctx context.Context) (int, error) {
+	if m.countOpenPullRequests != nil {
+		return m.countOpenPullRequests(ctx)
+	}
+	return 0, nil
 }
 
-func (m *mockRepository) UpdateNeedMoreReviewers(ctx context.Context, prID string, need bool) error {
-	return m.updateNeedMoreReviewersFunc(ctx, prID, need)
+func (m *mockRepo) UpdateNeedMoreReviewers(ctx context.Context, prID string, need bool) error {
+	if m.updateNeedMoreReviewers != nil {
+		return m.updateNeedMoreReviewers(ctx, prID, need)
+	}
+	return nil
 }
 
-func (m *mockRepository) ListOpenPullRequestsByReviewers(ctx context.Context, userIDs []string) (map[string][]entities.PullRequest, error) {
-	return m.listOpenPullRequestsByReviewersFunc(ctx, userIDs)
+func (m *mockRepo) ListOpenPullRequestsByReviewers(ctx context.Context, userIDs []string) (map[string][]entities.PullRequest, error) {
+	if m.listOpenPullRequestsByReviewers != nil {
+		return m.listOpenPullRequestsByReviewers(ctx, userIDs)
+	}
+	return map[string][]entities.PullRequest{}, nil
 }
 
-func (m *mockRepository) BulkSetUsersActive(ctx context.Context, teamName string, userIDs []string, isActive bool) ([]entities.User, error) {
-	return m.bulkSetUsersActiveFunc(ctx, teamName, userIDs, isActive)
+func (m *mockRepo) BulkSetUsersActive(ctx context.Context, teamName string, userIDs []string, isActive bool) ([]entities.User, error) {
+	if m.bulkSetUsersActive != nil {
+		return m.bulkSetUsersActive(ctx, teamName, userIDs, isActive)
+	}
+	return []entities.User{}, nil
 }
 
 func TestUseCase_CreateTeam(t *testing.T) {
-	log := logger.New()
+	uc := New(&mockRepo{createTeam: func(ctx context.Context, name string, members []entities.TeamMember) (entities.Team, error) {
+		return entities.Team{Name: "backend", Members: []entities.TeamMember{{UserID: "ivan", Username: "Иван"}}}, nil
+	}}, logger.New())
+	result, err := uc.CreateTeam(context.Background(), entities.Team{Name: "backend"})
+	assert.NoError(t, err)
+	assert.Equal(t, "backend", result.Name)
 
-	t.Run("success", func(t *testing.T) {
-		team := entities.Team{
-			Name: "backend",
-			Members: []entities.TeamMember{
-				{UserID: "u1", Username: "Alice", IsActive: true},
-			},
-		}
-		mockRepo := &mockRepository{
-			createTeamFunc: func(ctx context.Context, name string, members []entities.TeamMember) (entities.Team, error) {
-				return team, nil
-			},
-		}
-		uc := New(mockRepo, log)
+	_, err = uc.CreateTeam(context.Background(), entities.Team{Name: ""})
+	assert.Error(t, err)
+}
 
-		result, err := uc.CreateTeam(context.Background(), team)
-		assert.NoError(t, err)
-		assert.Equal(t, "backend", result.Name)
-	})
+func TestUseCase_GetTeam(t *testing.T) {
+	uc := New(&mockRepo{getTeam: func(ctx context.Context, name string) (entities.Team, error) {
+		return entities.Team{Name: "backend"}, nil
+	}}, logger.New())
+	result, err := uc.GetTeam(context.Background(), "backend")
+	assert.NoError(t, err)
+	assert.Equal(t, "backend", result.Name)
 
-	t.Run("empty name", func(t *testing.T) {
-		mockRepo := &mockRepository{}
-		uc := New(mockRepo, log)
-		team := entities.Team{Name: ""}
-		_, err := uc.CreateTeam(context.Background(), team)
-		assert.Error(t, err)
-	})
+	_, err = uc.GetTeam(context.Background(), "")
+	assert.Error(t, err)
+}
+
+func TestUseCase_SetUserActive(t *testing.T) {
+	uc := New(&mockRepo{setUserActive: func(ctx context.Context, userID string, isActive bool) (entities.User, error) {
+		return entities.User{ID: "ivan", IsActive: true}, nil
+	}}, logger.New())
+	result, err := uc.SetUserActive(context.Background(), "ivan", true)
+	assert.NoError(t, err)
+	assert.True(t, result.IsActive)
+
+	_, err = uc.SetUserActive(context.Background(), "", true)
+	assert.Error(t, err)
 }
 
 func TestUseCase_CreatePullRequest(t *testing.T) {
-	log := logger.New()
+	uc := New(&mockRepo{
+		getUser: func(ctx context.Context, userID string) (entities.User, error) {
+			return entities.User{ID: "ivan", TeamName: "backend"}, nil
+		},
+		listUsersByTeam: func(ctx context.Context, teamName string, onlyActive bool) ([]entities.User, error) {
+			return []entities.User{{ID: "andrey"}, {ID: "dmitry"}}, nil
+		},
+		createPullRequest: func(ctx context.Context, pr entities.PullRequest) (entities.PullRequest, error) {
+			return pr, nil
+		},
+	}, logger.New())
+	result, err := uc.CreatePullRequest(context.Background(), CreatePullRequestInput{ID: "pr-1", Name: "Feature", AuthorID: "ivan"})
+	assert.NoError(t, err)
+	assert.Equal(t, "pr-1", result.ID)
+	assert.Len(t, result.AssignedReviewers, 2)
 
-	t.Run("success", func(t *testing.T) {
-		author := entities.User{
-			ID:       "u1",
-			Username: "Alice",
-			TeamName: "backend",
-			IsActive: true,
-		}
-		members := []entities.User{
-			{ID: "u2", Username: "Bob", TeamName: "backend", IsActive: true},
-			{ID: "u3", Username: "Carol", TeamName: "backend", IsActive: true},
-		}
+	uc = New(&mockRepo{getUser: func(ctx context.Context, userID string) (entities.User, error) {
+		return entities.User{}, entities.ErrUserNotFound
+	}}, logger.New())
+	_, err = uc.CreatePullRequest(context.Background(), CreatePullRequestInput{ID: "pr-1", Name: "Feature", AuthorID: "unknown"})
+	assert.Error(t, err)
+	assert.True(t, errors.Is(err, entities.ErrAuthorNotFound))
 
-		mockRepo := &mockRepository{
-			getUserFunc: func(ctx context.Context, userID string) (entities.User, error) {
-				return author, nil
-			},
-			listUsersByTeamFunc: func(ctx context.Context, teamName string, onlyActive bool) ([]entities.User, error) {
-				return members, nil
-			},
-			createPullRequestFunc: func(ctx context.Context, pr entities.PullRequest) (entities.PullRequest, error) {
-				return pr, nil
-			},
-		}
-		uc := New(mockRepo, log)
+	_, err = uc.CreatePullRequest(context.Background(), CreatePullRequestInput{})
+	assert.Error(t, err)
+}
 
-		input := CreatePullRequestInput{
-			ID:       "pr-1",
-			Name:     "Feature",
-			AuthorID: "u1",
-		}
-		result, err := uc.CreatePullRequest(context.Background(), input)
-		assert.NoError(t, err)
-		assert.Equal(t, "pr-1", result.ID)
-	})
+func TestUseCase_MergePullRequest(t *testing.T) {
+	uc := New(&mockRepo{setPullRequestStatusMerged: func(ctx context.Context, prID string) (entities.PullRequest, error) {
+		return entities.PullRequest{ID: "pr-1", Status: entities.StatusMerged}, nil
+	}}, logger.New())
+	result, err := uc.MergePullRequest(context.Background(), "pr-1")
+	assert.NoError(t, err)
+	assert.Equal(t, entities.StatusMerged, result.Status)
 
-	t.Run("author not found", func(t *testing.T) {
-		mockRepo := &mockRepository{
-			getUserFunc: func(ctx context.Context, userID string) (entities.User, error) {
-				return entities.User{}, entities.ErrUserNotFound
-			},
-		}
-		uc := New(mockRepo, log)
-
-		input := CreatePullRequestInput{
-			ID:       "pr-1",
-			Name:     "Feature",
-			AuthorID: "u1",
-		}
-		_, err := uc.CreatePullRequest(context.Background(), input)
-		assert.Error(t, err)
-		assert.True(t, errors.Is(err, entities.ErrAuthorNotFound))
-	})
+	_, err = uc.MergePullRequest(context.Background(), "")
+	assert.Error(t, err)
 }
 
 func TestUseCase_ReassignReviewer(t *testing.T) {
-	log := logger.New()
+	uc := New(&mockRepo{
+		getPullRequest: func(ctx context.Context, prID string) (entities.PullRequest, error) {
+			if prID == "pr-1" {
+				return entities.PullRequest{ID: "pr-1", Status: entities.StatusOpen, AssignedReviewers: []string{"andrey"}, AuthorID: "ivan"}, nil
+			}
+			return entities.PullRequest{ID: "pr-1", AssignedReviewers: []string{"dmitry"}}, nil
+		},
+		getUser: func(ctx context.Context, userID string) (entities.User, error) {
+			return entities.User{ID: "andrey", TeamName: "backend"}, nil
+		},
+		listUsersByTeam: func(ctx context.Context, teamName string, onlyActive bool) ([]entities.User, error) {
+			return []entities.User{{ID: "dmitry"}}, nil
+		},
+		replaceReviewer:         func(ctx context.Context, prID string, oldUserID string, newUserID *string) error { return nil },
+		listAssignedReviewers:   func(ctx context.Context, prID string) ([]string, error) { return []string{"dmitry"}, nil },
+		updateNeedMoreReviewers: func(ctx context.Context, prID string, need bool) error { return nil },
+	}, logger.New())
+	result, err := uc.ReassignReviewer(context.Background(), "pr-1", "andrey")
+	assert.NoError(t, err)
+	assert.NotEmpty(t, result.ReplacedBy)
 
-	t.Run("pr merged", func(t *testing.T) {
-		pr := entities.PullRequest{
-			ID:     "pr-1",
-			Status: entities.StatusMerged,
-		}
-		mockRepo := &mockRepository{
-			getPullRequestFunc: func(ctx context.Context, prID string) (entities.PullRequest, error) {
-				return pr, nil
-			},
-		}
-		uc := New(mockRepo, log)
+	uc = New(&mockRepo{getPullRequest: func(ctx context.Context, prID string) (entities.PullRequest, error) {
+		return entities.PullRequest{ID: "pr-1", Status: entities.StatusMerged}, nil
+	}}, logger.New())
+	_, err = uc.ReassignReviewer(context.Background(), "pr-1", "andrey")
+	assert.Error(t, err)
+	assert.True(t, errors.Is(err, entities.ErrPullRequestMerged))
 
-		_, err := uc.ReassignReviewer(context.Background(), "pr-1", "u2")
-		assert.Error(t, err)
-		assert.True(t, errors.Is(err, entities.ErrPullRequestMerged))
-	})
+	uc = New(&mockRepo{getPullRequest: func(ctx context.Context, prID string) (entities.PullRequest, error) {
+		return entities.PullRequest{ID: "pr-1", Status: entities.StatusOpen, AssignedReviewers: []string{"dmitry"}}, nil
+	}}, logger.New())
+	_, err = uc.ReassignReviewer(context.Background(), "pr-1", "andrey")
+	assert.Error(t, err)
+	assert.True(t, errors.Is(err, entities.ErrReviewerNotAssigned))
+}
+
+func TestUseCase_GetUserReviews(t *testing.T) {
+	uc := New(&mockRepo{
+		getUser: func(ctx context.Context, userID string) (entities.User, error) { return entities.User{ID: "ivan"}, nil },
+		listReviewPullRequests: func(ctx context.Context, userID string) ([]entities.PullRequestShort, error) {
+			return []entities.PullRequestShort{{ID: "pr-1", Name: "Feature"}}, nil
+		},
+	}, logger.New())
+	result, err := uc.GetUserReviews(context.Background(), "ivan")
+	assert.NoError(t, err)
+	assert.Len(t, result, 1)
+
+	_, err = uc.GetUserReviews(context.Background(), "")
+	assert.Error(t, err)
+}
+
+func TestUseCase_GetStats(t *testing.T) {
+	uc := New(&mockRepo{
+		listReviewerAssignments: func(ctx context.Context) (map[string]int, error) { return map[string]int{"ivan": 5}, nil },
+		countOpenPullRequests:   func(ctx context.Context) (int, error) { return 10, nil },
+	}, logger.New())
+	result, err := uc.GetStats(context.Background())
+	assert.NoError(t, err)
+	assert.Equal(t, 10, result.OpenPRs)
+	assert.Equal(t, 5, result.AssignmentsByUser["ivan"])
+}
+
+func TestUseCase_DeactivateTeamUsers(t *testing.T) {
+	uc := New(&mockRepo{
+		bulkSetUsersActive: func(ctx context.Context, teamName string, userIDs []string, isActive bool) ([]entities.User, error) {
+			return []entities.User{{ID: "andrey", TeamName: "backend"}}, nil
+		},
+		listOpenPullRequestsByReviewers: func(ctx context.Context, userIDs []string) (map[string][]entities.PullRequest, error) {
+			return map[string][]entities.PullRequest{"andrey": {{ID: "pr-1", Status: entities.StatusOpen, AssignedReviewers: []string{"andrey"}, AuthorID: "ivan"}}}, nil
+		},
+		listUsersByTeam: func(ctx context.Context, teamName string, onlyActive bool) ([]entities.User, error) {
+			return []entities.User{{ID: "ivan"}}, nil
+		},
+		listAssignedReviewers:   func(ctx context.Context, prID string) ([]string, error) { return []string{"ivan"}, nil },
+		replaceReviewer:         func(ctx context.Context, prID string, oldUserID string, newUserID *string) error { return nil },
+		updateNeedMoreReviewers: func(ctx context.Context, prID string, need bool) error { return nil },
+		getPullRequest: func(ctx context.Context, prID string) (entities.PullRequest, error) {
+			return entities.PullRequest{ID: "pr-1", Status: entities.StatusOpen}, nil
+		},
+	}, logger.New())
+	result, err := uc.DeactivateTeamUsers(context.Background(), "backend", []string{"andrey"})
+	assert.NoError(t, err)
+	assert.Len(t, result.Users, 1)
+
+	_, err = uc.DeactivateTeamUsers(context.Background(), "", []string{"andrey"})
+	assert.Error(t, err)
 }
