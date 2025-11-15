@@ -65,6 +65,13 @@ func (m *mockRepo) ListUsersByTeam(ctx context.Context, teamName string, onlyAct
 	return []entities.User{}, nil
 }
 
+func (m *mockRepo) BulkSetUsersActive(ctx context.Context, teamName string, userIDs []string, isActive bool) ([]entities.User, error) {
+	if m.bulkSetUsersActive != nil {
+		return m.bulkSetUsersActive(ctx, teamName, userIDs, isActive)
+	}
+	return []entities.User{}, nil
+}
+
 func (m *mockRepo) CreatePullRequest(ctx context.Context, pr entities.PullRequest) (entities.PullRequest, error) {
 	if m.createPullRequest != nil {
 		return m.createPullRequest(ctx, pr)
@@ -107,20 +114,6 @@ func (m *mockRepo) ListReviewPullRequests(ctx context.Context, userID string) ([
 	return []entities.PullRequestShort{}, nil
 }
 
-func (m *mockRepo) ListReviewerAssignments(ctx context.Context) (map[string]int, error) {
-	if m.listReviewerAssignments != nil {
-		return m.listReviewerAssignments(ctx)
-	}
-	return map[string]int{}, nil
-}
-
-func (m *mockRepo) CountOpenPullRequests(ctx context.Context) (int, error) {
-	if m.countOpenPullRequests != nil {
-		return m.countOpenPullRequests(ctx)
-	}
-	return 0, nil
-}
-
 func (m *mockRepo) UpdateNeedMoreReviewers(ctx context.Context, prID string, need bool) error {
 	if m.updateNeedMoreReviewers != nil {
 		return m.updateNeedMoreReviewers(ctx, prID, need)
@@ -135,11 +128,18 @@ func (m *mockRepo) ListOpenPullRequestsByReviewers(ctx context.Context, userIDs 
 	return map[string][]entities.PullRequest{}, nil
 }
 
-func (m *mockRepo) BulkSetUsersActive(ctx context.Context, teamName string, userIDs []string, isActive bool) ([]entities.User, error) {
-	if m.bulkSetUsersActive != nil {
-		return m.bulkSetUsersActive(ctx, teamName, userIDs, isActive)
+func (m *mockRepo) ListReviewerAssignments(ctx context.Context) (map[string]int, error) {
+	if m.listReviewerAssignments != nil {
+		return m.listReviewerAssignments(ctx)
 	}
-	return []entities.User{}, nil
+	return map[string]int{}, nil
+}
+
+func (m *mockRepo) CountOpenPullRequests(ctx context.Context) (int, error) {
+	if m.countOpenPullRequests != nil {
+		return m.countOpenPullRequests(ctx)
+	}
+	return 0, nil
 }
 
 func TestUseCase_CreateTeam(t *testing.T) {

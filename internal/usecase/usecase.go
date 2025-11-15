@@ -24,16 +24,20 @@ type UseCase interface {
 }
 
 type useCase struct {
-	repo   repository.Repository
-	rand   *random.Safe
-	logger logger.Logger
+	teamRepo        repository.TeamRepository
+	pullRequestRepo repository.PullRequestRepository
+	statsRepo       repository.StatsRepository
+	rand            *random.Safe
+	logger          logger.Logger
 }
 
 func New(repo repository.Repository, log logger.Logger) UseCase {
 	return &useCase{
-		repo:   repo,
-		rand:   random.New(),
-		logger: log,
+		teamRepo:        repo,
+		pullRequestRepo: repo,
+		statsRepo:       repo,
+		rand:            random.New(),
+		logger:          log,
 	}
 }
 
@@ -42,14 +46,14 @@ func (u *useCase) CreateTeam(ctx context.Context, team entities.Team) (entities.
 		return entities.Team{}, fmt.Errorf("team name required")
 	}
 	u.logger.Info("creating team", "name", team.Name)
-	return u.repo.CreateTeam(ctx, team.Name, team.Members)
+	return u.teamRepo.CreateTeam(ctx, team.Name, team.Members)
 }
 
 func (u *useCase) GetTeam(ctx context.Context, name string) (entities.Team, error) {
 	if name == "" {
 		return entities.Team{}, fmt.Errorf("team name required")
 	}
-	return u.repo.GetTeam(ctx, name)
+	return u.teamRepo.GetTeam(ctx, name)
 }
 
 func (u *useCase) SetUserActive(ctx context.Context, userID string, isActive bool) (entities.User, error) {
@@ -57,7 +61,7 @@ func (u *useCase) SetUserActive(ctx context.Context, userID string, isActive boo
 		return entities.User{}, fmt.Errorf("user id required")
 	}
 	u.logger.Info("setting user active", "user_id", userID, "is_active", isActive)
-	return u.repo.SetUserActive(ctx, userID, isActive)
+	return u.teamRepo.SetUserActive(ctx, userID, isActive)
 }
 
 type CreatePullRequestInput struct {
@@ -72,7 +76,7 @@ func (u *useCase) CreatePullRequest(ctx context.Context, input CreatePullRequest
 	}
 
 	u.logger.Debug("creating pull request", "id", input.ID, "author", input.AuthorID)
-	author, err := u.repo.GetUser(ctx, input.AuthorID)
+	author, err := u.teamRepo.GetUser(ctx, input.AuthorID)
 	if err != nil {
 		if errors.Is(err, entities.ErrUserNotFound) {
 			return entities.PullRequest{}, entities.ErrAuthorNotFound
@@ -80,7 +84,7 @@ func (u *useCase) CreatePullRequest(ctx context.Context, input CreatePullRequest
 		return entities.PullRequest{}, err
 	}
 
-	members, err := u.repo.ListUsersByTeam(ctx, author.TeamName, true)
+	members, err := u.teamRepo.ListUsersByTeam(ctx, author.TeamName, true)
 	if err != nil {
 		return entities.PullRequest{}, err
 	}
@@ -98,7 +102,7 @@ func (u *useCase) CreatePullRequest(ctx context.Context, input CreatePullRequest
 		NeedMoreReviewers: needMore,
 	}
 
-	created, err := u.repo.CreatePullRequest(ctx, pr)
+	created, err := u.pullRequestRepo.CreatePullRequest(ctx, pr)
 	if err != nil {
 		return entities.PullRequest{}, err
 	}
@@ -111,7 +115,7 @@ func (u *useCase) MergePullRequest(ctx context.Context, prID string) (entities.P
 		return entities.PullRequest{}, fmt.Errorf("pr id required")
 	}
 	u.logger.Info("merging pull request", "id", prID)
-	return u.repo.SetPullRequestStatusMerged(ctx, prID)
+	return u.pullRequestRepo.SetPullRequestStatusMerged(ctx, prID)
 }
 
 type ReassignResult struct {
@@ -125,7 +129,7 @@ func (u *useCase) ReassignReviewer(ctx context.Context, prID string, oldUserID s
 	}
 
 	u.logger.Debug("reassigning reviewer", "pr_id", prID, "old_user", oldUserID)
-	pr, err := u.repo.GetPullRequest(ctx, prID)
+	pr, err := u.pullRequestRepo.GetPullRequest(ctx, prID)
 	if err != nil {
 		return ReassignResult{}, err
 	}
@@ -143,7 +147,7 @@ func (u *useCase) ReassignReviewer(ctx context.Context, prID string, oldUserID s
 		return ReassignResult{}, err
 	}
 
-	if err := u.repo.ReplaceReviewer(ctx, pr.ID, oldUserID, &newReviewer); err != nil {
+	if err := u.pullRequestRepo.ReplaceReviewer(ctx, pr.ID, oldUserID, &newReviewer); err != nil {
 		return ReassignResult{}, err
 	}
 
@@ -164,20 +168,20 @@ func (u *useCase) GetUserReviews(ctx context.Context, userID string) ([]entities
 		return nil, fmt.Errorf("user id required")
 	}
 
-	if _, err := u.repo.GetUser(ctx, userID); err != nil {
+	if _, err := u.teamRepo.GetUser(ctx, userID); err != nil {
 		return nil, err
 	}
 
-	return u.repo.ListReviewPullRequests(ctx, userID)
+	return u.pullRequestRepo.ListReviewPullRequests(ctx, userID)
 }
 
 func (u *useCase) GetStats(ctx context.Context) (entities.Stats, error) {
-	assignments, err := u.repo.ListReviewerAssignments(ctx)
+	assignments, err := u.statsRepo.ListReviewerAssignments(ctx)
 	if err != nil {
 		return entities.Stats{}, err
 	}
 
-	open, err := u.repo.CountOpenPullRequests(ctx)
+	open, err := u.statsRepo.CountOpenPullRequests(ctx)
 	if err != nil {
 		return entities.Stats{}, err
 	}
@@ -199,7 +203,7 @@ func (u *useCase) DeactivateTeamUsers(ctx context.Context, teamName string, user
 	}
 
 	u.logger.Info("deactivating team users", "team", teamName, "count", len(userIDs))
-	updated, err := u.repo.BulkSetUsersActive(ctx, teamName, userIDs, false)
+	updated, err := u.teamRepo.BulkSetUsersActive(ctx, teamName, userIDs, false)
 	if err != nil {
 		return DeactivateResult{}, err
 	}
@@ -256,12 +260,12 @@ func (u *useCase) isReviewerAssigned(pr entities.PullRequest, userID string) boo
 }
 
 func (u *useCase) findReplacement(ctx context.Context, pr entities.PullRequest, oldUserID string) (string, error) {
-	reviewer, err := u.repo.GetUser(ctx, oldUserID)
+	reviewer, err := u.teamRepo.GetUser(ctx, oldUserID)
 	if err != nil {
 		return "", err
 	}
 
-	candidates, err := u.repo.ListUsersByTeam(ctx, reviewer.TeamName, true)
+	candidates, err := u.teamRepo.ListUsersByTeam(ctx, reviewer.TeamName, true)
 	if err != nil {
 		return "", err
 	}
@@ -290,13 +294,13 @@ func (u *useCase) findReplacement(ctx context.Context, pr entities.PullRequest, 
 }
 
 func (u *useCase) updateReviewerCount(ctx context.Context, prID string) (entities.PullRequest, error) {
-	updated, err := u.repo.GetPullRequest(ctx, prID)
+	updated, err := u.pullRequestRepo.GetPullRequest(ctx, prID)
 	if err != nil {
 		return entities.PullRequest{}, err
 	}
 
 	needMore := len(updated.AssignedReviewers) < 2
-	if err := u.repo.UpdateNeedMoreReviewers(ctx, prID, needMore); err != nil {
+	if err := u.pullRequestRepo.UpdateNeedMoreReviewers(ctx, prID, needMore); err != nil {
 		return entities.PullRequest{}, err
 	}
 
@@ -309,12 +313,12 @@ func (u *useCase) handleDeactivatedReviewers(ctx context.Context, teamName strin
 		deactivatedIDs[i] = u.ID
 	}
 
-	openPRs, err := u.repo.ListOpenPullRequestsByReviewers(ctx, deactivatedIDs)
+	openPRs, err := u.pullRequestRepo.ListOpenPullRequestsByReviewers(ctx, deactivatedIDs)
 	if err != nil {
 		return nil, err
 	}
 
-	activeMembers, err := u.repo.ListUsersByTeam(ctx, teamName, true)
+	activeMembers, err := u.teamRepo.ListUsersByTeam(ctx, teamName, true)
 	if err != nil {
 		return nil, err
 	}
@@ -339,7 +343,7 @@ func (u *useCase) handleDeactivatedReviewers(ctx context.Context, teamName strin
 }
 
 func (u *useCase) replaceDeactivatedReviewer(ctx context.Context, pr entities.PullRequest, reviewerID string, activeSet map[string]entities.User) error {
-	assignments, err := u.repo.ListAssignedReviewers(ctx, pr.ID)
+	assignments, err := u.pullRequestRepo.ListAssignedReviewers(ctx, pr.ID)
 	if err != nil {
 		return err
 	}
@@ -375,37 +379,37 @@ func (u *useCase) buildCandidatePool(activeSet map[string]entities.User, authorI
 }
 
 func (u *useCase) handleNoReplacement(ctx context.Context, pr entities.PullRequest, reviewerID string) error {
-	if err := u.repo.ReplaceReviewer(ctx, pr.ID, reviewerID, nil); err != nil && !errors.Is(err, entities.ErrReviewerNotAssigned) {
+	if err := u.pullRequestRepo.ReplaceReviewer(ctx, pr.ID, reviewerID, nil); err != nil && !errors.Is(err, entities.ErrReviewerNotAssigned) {
 		return err
 	}
 
-	assignments, err := u.repo.ListAssignedReviewers(ctx, pr.ID)
+	assignments, err := u.pullRequestRepo.ListAssignedReviewers(ctx, pr.ID)
 	if err != nil {
 		return err
 	}
 
 	needMore := len(assignments) < 2
-	return u.repo.UpdateNeedMoreReviewers(ctx, pr.ID, needMore)
+	return u.pullRequestRepo.UpdateNeedMoreReviewers(ctx, pr.ID, needMore)
 }
 
 func (u *useCase) replaceWithNewReviewer(ctx context.Context, pr entities.PullRequest, oldID, newID string) error {
-	if err := u.repo.ReplaceReviewer(ctx, pr.ID, oldID, &newID); err != nil {
+	if err := u.pullRequestRepo.ReplaceReviewer(ctx, pr.ID, oldID, &newID); err != nil {
 		return err
 	}
 
-	assignments, err := u.repo.ListAssignedReviewers(ctx, pr.ID)
+	assignments, err := u.pullRequestRepo.ListAssignedReviewers(ctx, pr.ID)
 	if err != nil {
 		return err
 	}
 
 	needMore := len(assignments) < 2
-	return u.repo.UpdateNeedMoreReviewers(ctx, pr.ID, needMore)
+	return u.pullRequestRepo.UpdateNeedMoreReviewers(ctx, pr.ID, needMore)
 }
 
 func (u *useCase) collectAffectedPRs(ctx context.Context, affectedMap map[string]struct{}) ([]entities.PullRequest, error) {
 	var affected []entities.PullRequest
 	for prID := range affectedMap {
-		p, err := u.repo.GetPullRequest(ctx, prID)
+		p, err := u.pullRequestRepo.GetPullRequest(ctx, prID)
 		if err != nil {
 			return nil, err
 		}
