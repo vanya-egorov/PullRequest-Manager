@@ -1,4 +1,4 @@
-package usecase
+package pullrequest
 
 import (
 	"context"
@@ -11,4 +11,15 @@ type PullRequestUseCase interface {
 	MergePullRequest(ctx context.Context, prID string) (entities.PullRequest, error)
 	ReassignReviewer(ctx context.Context, prID string, oldUserID string) (ReassignResult, error)
 	GetUserReviews(ctx context.Context, userID string) ([]entities.PullRequestShort, error)
+}
+
+type CreatePullRequestInput struct {
+	ID       string
+	Name     string
+	AuthorID string
+}
+
+type ReassignResult struct {
+	PullRequest entities.PullRequest
+	ReplacedBy  string
 }

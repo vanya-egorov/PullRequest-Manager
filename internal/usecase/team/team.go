@@ -1,4 +1,4 @@
-package usecase
+package team
 
 import (
 	"context"
@@ -11,4 +11,9 @@ type TeamUseCase interface {
 	GetTeam(ctx context.Context, name string) (entities.Team, error)
 	SetUserActive(ctx context.Context, userID string, isActive bool) (entities.User, error)
 	DeactivateTeamUsers(ctx context.Context, teamName string, userIDs []string) (DeactivateResult, error)
+}
+
+type DeactivateResult struct {
+	Users         []entities.User
+	AffectedPulls []entities.PullRequest
 }

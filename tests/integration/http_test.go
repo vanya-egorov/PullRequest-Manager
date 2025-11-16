@@ -21,7 +21,9 @@ import (
 
 	"github.com/vanya-egorov/PullRequest-Manager/internal/handler"
 	"github.com/vanya-egorov/PullRequest-Manager/internal/infrastructure/postgres"
-	"github.com/vanya-egorov/PullRequest-Manager/internal/usecase"
+	"github.com/vanya-egorov/PullRequest-Manager/internal/usecase/pullrequest"
+	"github.com/vanya-egorov/PullRequest-Manager/internal/usecase/stats"
+	"github.com/vanya-egorov/PullRequest-Manager/internal/usecase/team"
 	"github.com/vanya-egorov/PullRequest-Manager/pkg/logger"
 )
 
@@ -82,10 +84,12 @@ func TestHTTPFlow(t *testing.T) {
 
 	log := logger.New()
 	repo := postgres.NewPostgresRepository(pool, log)
-	uc := usecase.New(repo, log)
+	teamUC := team.New(repo, repo, log)
+	pullRequestUC := pullrequest.New(repo, repo, log)
+	statsUC := stats.New(repo, log)
 	adminToken := "admin-secret"
 	userToken := "user-secret"
-	server := handler.New(uc, adminToken, userToken, log)
+	server := handler.New(teamUC, pullRequestUC, statsUC, adminToken, userToken, log)
 	ts := httptest.NewServer(server.Router())
 	t.Cleanup(func() {
 		ts.Close()

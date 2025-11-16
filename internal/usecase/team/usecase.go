@@ -1,4 +1,4 @@
-package usecase
+package team
 
 import (
 	"context"
@@ -6,11 +6,25 @@ import (
 	"fmt"
 
 	"github.com/vanya-egorov/PullRequest-Manager/internal/entities"
+	"github.com/vanya-egorov/PullRequest-Manager/internal/repository"
+	"github.com/vanya-egorov/PullRequest-Manager/pkg/logger"
+	"github.com/vanya-egorov/PullRequest-Manager/pkg/random"
 )
 
-type DeactivateResult struct {
-	Users         []entities.User
-	AffectedPulls []entities.PullRequest
+type useCase struct {
+	teamRepo        repository.TeamRepository
+	pullRequestRepo repository.PullRequestRepository
+	rand            *random.Safe
+	logger          logger.Logger
+}
+
+func New(teamRepo repository.TeamRepository, pullRequestRepo repository.PullRequestRepository, log logger.Logger) TeamUseCase {
+	return &useCase{
+		teamRepo:        teamRepo,
+		pullRequestRepo: pullRequestRepo,
+		rand:            random.New(),
+		logger:          log,
+	}
 }
 
 func (u *useCase) CreateTeam(ctx context.Context, team entities.Team) (entities.Team, error) {

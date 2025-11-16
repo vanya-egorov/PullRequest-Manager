@@ -11,7 +11,9 @@ import (
 	"github.com/vanya-egorov/PullRequest-Manager/internal/config"
 	"github.com/vanya-egorov/PullRequest-Manager/internal/handler"
 	"github.com/vanya-egorov/PullRequest-Manager/internal/infrastructure/postgres"
-	"github.com/vanya-egorov/PullRequest-Manager/internal/usecase"
+	"github.com/vanya-egorov/PullRequest-Manager/internal/usecase/pullrequest"
+	"github.com/vanya-egorov/PullRequest-Manager/internal/usecase/stats"
+	"github.com/vanya-egorov/PullRequest-Manager/internal/usecase/team"
 	"github.com/vanya-egorov/PullRequest-Manager/pkg/logger"
 )
 
@@ -37,8 +39,10 @@ func main() {
 	}
 
 	repo := postgres.NewPostgresRepository(pool, logger)
-	uc := usecase.New(repo, logger)
-	h := handler.New(uc, cfg.AdminToken, cfg.UserToken, logger)
+	teamUC := team.New(repo, repo, logger)
+	pullRequestUC := pullrequest.New(repo, repo, logger)
+	statsUC := stats.New(repo, logger)
+	h := handler.New(teamUC, pullRequestUC, statsUC, cfg.AdminToken, cfg.UserToken, logger)
 
 	httpServer := &http.Server{
 		Addr:    cfg.HTTPAddr,

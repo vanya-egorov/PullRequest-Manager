@@ -8,23 +8,29 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/vanya-egorov/PullRequest-Manager/internal/entities"
-	"github.com/vanya-egorov/PullRequest-Manager/internal/usecase"
+	"github.com/vanya-egorov/PullRequest-Manager/internal/usecase/pullrequest"
+	"github.com/vanya-egorov/PullRequest-Manager/internal/usecase/stats"
+	"github.com/vanya-egorov/PullRequest-Manager/internal/usecase/team"
 	"github.com/vanya-egorov/PullRequest-Manager/pkg/logger"
 )
 
 type Handler struct {
-	uc         usecase.UseCase
-	adminToken string
-	userToken  string
-	logger     logger.Logger
+	teamUC        team.TeamUseCase
+	pullRequestUC pullrequest.PullRequestUseCase
+	statsUC       stats.StatsUseCase
+	adminToken    string
+	userToken     string
+	logger        logger.Logger
 }
 
-func New(uc usecase.UseCase, adminToken, userToken string, log logger.Logger) *Handler {
+func New(teamUC team.TeamUseCase, pullRequestUC pullrequest.PullRequestUseCase, statsUC stats.StatsUseCase, adminToken, userToken string, log logger.Logger) *Handler {
 	return &Handler{
-		uc:         uc,
-		adminToken: adminToken,
-		userToken:  userToken,
-		logger:     log,
+		teamUC:        teamUC,
+		pullRequestUC: pullRequestUC,
+		statsUC:       statsUC,
+		adminToken:    adminToken,
+		userToken:     userToken,
+		logger:        log,
 	}
 }
 
@@ -147,7 +153,7 @@ func (h *Handler) handleTeamAdd(w http.ResponseWriter, r *http.Request) {
 			IsActive: m.IsActive,
 		})
 	}
-	team, err := h.uc.CreateTeam(r.Context(), entities.Team{Name: req.TeamName, Members: members})
+	team, err := h.teamUC.CreateTeam(r.Context(), entities.Team{Name: req.TeamName, Members: members})
 	if err != nil {
 		h.handleError(w, err)
 		return
@@ -161,7 +167,7 @@ func (h *Handler) handleTeamGet(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "team_name required")
 		return
 	}
-	team, err := h.uc.GetTeam(r.Context(), teamName)
+	team, err := h.teamUC.GetTeam(r.Context(), teamName)
 	if err != nil {
 		h.handleError(w, err)
 		return
@@ -205,7 +211,7 @@ func (h *Handler) handleSetIsActive(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "user_id required")
 		return
 	}
-	user, err := h.uc.SetUserActive(r.Context(), req.UserID, req.IsActive)
+	user, err := h.teamUC.SetUserActive(r.Context(), req.UserID, req.IsActive)
 	if err != nil {
 		h.handleError(w, err)
 		return
@@ -263,7 +269,7 @@ func (h *Handler) handlePRCreate(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "pull_request_id, pull_request_name and author_id required")
 		return
 	}
-	pr, err := h.uc.CreatePullRequest(r.Context(), usecase.CreatePullRequestInput{
+	pr, err := h.pullRequestUC.CreatePullRequest(r.Context(), pullrequest.CreatePullRequestInput{
 		ID:       req.ID,
 		Name:     req.Name,
 		AuthorID: req.Author,
@@ -290,7 +296,7 @@ func (h *Handler) handlePRMerge(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "pull_request_id required")
 		return
 	}
-	pr, err := h.uc.MergePullRequest(r.Context(), req.ID)
+	pr, err := h.pullRequestUC.MergePullRequest(r.Context(), req.ID)
 	if err != nil {
 		h.handleError(w, err)
 		return
@@ -319,7 +325,7 @@ func (h *Handler) handlePRReassign(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "pull_request_id and old_user_id required")
 		return
 	}
-	res, err := h.uc.ReassignReviewer(r.Context(), req.PRID, req.OldUser)
+	res, err := h.pullRequestUC.ReassignReviewer(r.Context(), req.PRID, req.OldUser)
 	if err != nil {
 		h.handleError(w, err)
 		return
@@ -345,7 +351,7 @@ func (h *Handler) handleUserReviews(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "user_id required")
 		return
 	}
-	prs, err := h.uc.GetUserReviews(r.Context(), userID)
+	prs, err := h.pullRequestUC.GetUserReviews(r.Context(), userID)
 	if err != nil {
 		h.handleError(w, err)
 		return
@@ -368,7 +374,7 @@ type statsResponse struct {
 }
 
 func (h *Handler) handleStats(w http.ResponseWriter, r *http.Request) {
-	stats, err := h.uc.GetStats(r.Context())
+	stats, err := h.statsUC.GetStats(r.Context())
 	if err != nil {
 		h.handleError(w, err)
 		return
@@ -400,7 +406,7 @@ func (h *Handler) handleTeamDeactivate(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "team_name required")
 		return
 	}
-	result, err := h.uc.DeactivateTeamUsers(r.Context(), req.TeamName, req.UserIDs)
+	result, err := h.teamUC.DeactivateTeamUsers(r.Context(), req.TeamName, req.UserIDs)
 	if err != nil {
 		h.handleError(w, err)
 		return
